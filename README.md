@@ -8,6 +8,8 @@ Skills are modular, self-contained packages that act as "onboarding guides" for 
 
 Each skill consists of a main instruction file (`SKILL.md`) and optional reference materials to provide deep context without cluttering the main context window.
 
+For more details on the skills standard, see [agentskills.io](https://agentskills.io/home).
+
 ## 📦 Available Skills
 
 ### `sea-orm-2`
@@ -21,7 +23,7 @@ Expert guidance for **SeaORM 2.0**, Rust's async ORM. This skill is essential fo
 - **Entity Loader API:** Efficient eager loading patterns to eliminate N+1 queries.
 - **Nested ActiveModel:** The new builder pattern for persisting complex object graphs.
 - **Entity-First Workflow:** Using Schema Registry for automatic schema synchronization.
-- **Anti-Patterns:** Critical warnings against common 1.0 habits that are now incorrect (e.g., redundant `column_type` annotations, missing `ExprTrait`).
+- **Anti-Patterns:** Critical warnings against common 1.0 habits that are now incorrect.
 
 **Bundled References:**
 
@@ -29,6 +31,24 @@ Expert guidance for **SeaORM 2.0**, Rust's async ORM. This skill is essential fo
 - `activemodel-patterns.md`: Creation, builder pattern, and nested persistence.
 - `query-patterns.md`: Filtering, joins, pagination, and raw SQL.
 - `migration-guide.md`: Step-by-step migration from 1.0 to 2.0.
+
+### `lingui-js-macro`
+
+Expert guidance for **LinguiJS**, a readable, automated, and optimized internationalization framework for JavaScript. This skill focuses on the macro system (`@lingui/macro`) which enables compile-time extraction of messages, offering a clean syntax and powerful ICU MessageFormat support.
+
+**Key Features:**
+
+- **Macro System:** Correct usage of `t`, `Trans`, `plural`, and `select` macros for static message extraction.
+- **ICU MessageFormat:** Patterns for handling complex plural rules, gender selections, and rich-text translations.
+- **Extraction Workflow:** CLI commands (`extract`, `compile`) to keep translation catalogs in sync with source code.
+- **React Integration:** Seamless usage of `<Trans>` components and `useLingui` hooks for component-level translation.
+- **Configuration:** Setting up `lingui.config.ts` for catalogs, locales, and formats.
+
+**Bundled References:**
+
+- `configuration.md`: Catalog formats, extractor config, and runtime setup.
+- `react-integration.md`: JSX translation patterns with `<Trans>`.
+- `cli-workflow.md`: Extract, translate, compile workflow for CI/CD.
 
 ## 🚀 Getting Started
 
@@ -50,9 +70,9 @@ These skills are designed to be used with AI agents that support the "Skills" fo
     _Example configuration:_
 
     ```yaml
-    # Example: configuring a skill path
     skills:
       - path: ./elcoosp-skills/sea-orm-2
+      - path: ./elcoosp-skills/lingui-js-macro
     ```
 
 ## 📖 Skill Anatomy
