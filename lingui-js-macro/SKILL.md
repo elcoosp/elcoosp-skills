@@ -3,7 +3,7 @@ name: lingui-js-macro
 description: Expert guidance for using LinguiJS internationalization (i18n) library with macros. Use when setting up i18n in React, React Native, or JavaScript projects, specifically for extracting messages using the `t`, `plural`, and `Trans` macros. Covers configuration, extraction workflow, and ICU message format patterns.
 ---
 
-# LinguiJS Macro Skill
+# LinguiJS Macro
 
 This skill provides guidance on implementing internationalization (i18n) in JavaScript/TypeScript projects using LinguiJS macros. It focuses on the compile-time extraction workflow enabled by the macro system (`@lingui/macro`).
 

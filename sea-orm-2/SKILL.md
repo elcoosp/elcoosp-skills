@@ -3,7 +3,7 @@ name: sea-orm-2
 description: Expert guidance for SeaORM 2.0, Rust's async ORM with strongly-typed columns, nested ActiveModels, Entity Loader API, and entity-first workflow. Use when working with SeaORM entities, queries, migrations, relations, or any database operations in Rust projects using SeaORM. Covers the new 2.0 API patterns, anti-patterns to avoid, and migration from 1.0.
 ---
 
-# SeaORM 2.0 Skill
+# SeaORM 2.0
 
 This skill provides expert guidance for using SeaORM 2.0 properly, focusing on the new patterns and avoiding common pitfalls that stem from SeaORM 1.0 knowledge.
 
