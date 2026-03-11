@@ -50,6 +50,19 @@ Expert guidance for **LinguiJS**, a readable, automated, and optimized internati
 - `react-integration.md`: JSX translation patterns with `<Trans>`.
 - `cli-workflow.md`: Extract, translate, compile workflow for CI/CD.
 
+### `toon-format`
+
+Expert guidance for **TOON (Token-Oriented Object Notation)**, a compact encoding of JSON designed for LLM contexts. This skill helps optimize token usage when passing structured data to models, achieving 30-60% savings for uniform arrays while maintaining retrieval accuracy.
+
+**Key Features:**
+
+- **Token Efficiency:** Strategies to achieve 30-60% token reduction for uniform arrays and ~40% for mixed-structure datasets compared to JSON.
+- **Syntax Patterns:** Complete coverage of objects, nested structures, primitive arrays, tabular arrays, and mixed arrays with quoting and escaping rules.
+- **LLM Integration:** Best practices for using TOON in prompts (input) and parsing model output (output), including validation with strict mode.
+- **Multi-Language APIs:** Usage examples for TypeScript (`@toon-format/toon`), Rust (`toon` crate), Python (`toon-pyrs`), and the CLI tool.
+- **Decision Framework:** Clear guidelines on when to use TOON versus JSON-compact or CSV based on data structure (uniformity, nesting depth, tabular eligibility).
+- **Strict Validation:** Using array length markers `[N]` and field headers `{fields}` to detect truncation and malformed output.
+
 ## 🚀 Getting Started
 
 ### Prerequisites
@@ -73,6 +86,7 @@ These skills are designed to be used with AI agents that support the "Skills" fo
     skills:
       - path: ./elcoosp-skills/sea-orm-2
       - path: ./elcoosp-skills/lingui-js-macro
+      - path: ./elcoosp-skills/toon-format
     ```
 
 ## 📖 Skill Anatomy
