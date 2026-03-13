@@ -63,6 +63,28 @@ Expert guidance for **TOON (Token-Oriented Object Notation)**, a compact encodin
 - **Decision Framework:** Clear guidelines on when to use TOON versus JSON-compact or CSV based on data structure (uniformity, nesting depth, tabular eligibility).
 - **Strict Validation:** Using array length markers `[N]` and field headers `{fields}` to detect truncation and malformed output.
 
+### `nextjs-landing-page`
+
+Expert guidance for building production‑ready **Next.js landing pages** with modern patterns – i18n, A/B testing, waitlist capture, analytics, and polished UI components. This skill captures architecture, component patterns, and best practices from the [CodeBridge landing page](https://codebridge.dev) – a fully functional, production‑grade example.
+
+**Key Features:**
+
+- **Project Structure:** Clean App Router hierarchy with dynamic `[lang]` routes, shared components, and modular sections.
+- **Internationalization (i18n):** Setup with Lingui, server‑side translation loading, and client‑side `<Trans>` usage.
+- **A/B Testing:** Cookie‑based variant assignment via middleware and React context provider.
+- **UTM Tracking:** First‑touch attribution with cookie persistence and context provider.
+- **Waitlist System:** Database integration (Turso), API routes, and live counter component.
+- **Component Library:** Reusable sections (Hero, Features, Pricing, etc.) built with shadcn/ui and Tailwind CSS.
+- **Animations:** Scroll‑triggered entrances using Framer Motion, respecting reduced motion.
+- **Polished Details:** Accessibility, focus management, responsive design, and performance optimizations.
+
+**Bundled References:**
+
+- `SKILL.md`: Detailed instructions, component table, best practices, and examples.
+- `README.md`: Quick start guide.
+
+This skill is ideal for anyone launching a new product, open‑source project, or service who wants a high‑quality, conversion‑optimized landing page without reinventing the wheel.
+
 ## 🚀 Getting Started
 
 ### Prerequisites
@@ -87,6 +109,7 @@ These skills are designed to be used with AI agents that support the "Skills" fo
       - path: ./elcoosp-skills/sea-orm-2
       - path: ./elcoosp-skills/lingui-js-macro
       - path: ./elcoosp-skills/toon-format
+      - path: ./elcoosp-skills/nextjs-landing-page
     ```
 
 ## 📖 Skill Anatomy
