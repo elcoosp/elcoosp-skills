@@ -63,6 +63,20 @@ Expert guidance for **TOON (Token-Oriented Object Notation)**, a compact encodin
 - **Decision Framework:** Clear guidelines on when to use TOON versus JSON-compact or CSV based on data structure (uniformity, nesting depth, tabular eligibility).
 - **Strict Validation:** Using array length markers `[N]` and field headers `{fields}` to detect truncation and malformed output.
 
+### `product-launch-spec-builder`
+
+A comprehensive **meta‑skill** that guides you from a new product idea to a complete, ready‑to‑implement specification suite. It orchestrates multiple specialised sub‑skills (`bmad-idea`, `spec-writer`, mockup generator, `writing-plans`, `create-readme`) through an interactive step‑by‑step workflow.
+
+**Key Features:**
+
+- **Five‑Phase Workflow:** Ideation & Vision → Requirements & Domain Modeling → Architecture & Design → Testing & Implementation Planning → Review & Refinement.
+- **Structured Outputs:** Produces all six core specification documents (Vision, BRS, SRS, Architecture, UX, Test Plan), HTML/CSS mockups, a detailed implementation plan, and a polished README.
+- **Interactive Guidance:** Asks clarifying questions at each stage, with built‑in validation and review loops.
+- **Folder Automation:** Creates a well‑organized project folder with all deliverables.
+- **Reusable Process:** Encapsulates the entire product definition journey, ensuring nothing is missed.
+
+**Bundled References:** (none – this skill references other skills in the collection)
+
 ### `nextjs-landing-page`
 
 Expert guidance for building production‑ready **Next.js landing pages** with modern patterns – i18n, A/B testing, waitlist capture, analytics, and polished UI components. This skill captures architecture, component patterns, and best practices from the [CodeBridge landing page](https://codebridge.dev) – a fully functional, production‑grade example.
@@ -109,6 +123,7 @@ These skills are designed to be used with AI agents that support the "Skills" fo
       - path: ./elcoosp-skills/sea-orm-2
       - path: ./elcoosp-skills/lingui-js-macro
       - path: ./elcoosp-skills/toon-format
+      - path: ./elcoosp-skills/product-launch-spec-builder
       - path: ./elcoosp-skills/nextjs-landing-page
     ```
 
