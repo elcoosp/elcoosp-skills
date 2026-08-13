@@ -1,3 +1,8 @@
+---
+name: Lingui 6 i18n Expert
+description: Comprehensive guide for AI agents on using Lingui 6 internationalization – with a strong focus on macros as the primary developer experience for writing translations in JavaScript/TypeScript, React, React Native, and Node.js.
+---
+
 ## Skill Name: Lingui 6 i18n Expert
 
 **Purpose:**  
