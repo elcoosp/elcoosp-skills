@@ -1,261 +1,172 @@
+## Skill Name: Lingui 6 i18n Expert
+
+**Purpose:**  
+Provide accurate, idiomatic guidance on using Lingui 6, with a special focus on **macros** – the primary developer experience (DX) tool for writing translations. Macros are compile‑time transforms that let you write natural JS/JSX and automatically generate ICU MessageFormat catalogs.
+
 ---
-name: lingui-js-macro
-description: Expert guidance for using LinguiJS internationalization (i18n) library with macros. Use when setting up i18n in React, React Native, or JavaScript projects, specifically for extracting messages using the `t`, `plural`, and `Trans` macros. Covers configuration, extraction workflow, and ICU message format patterns.
+
+### 1. Core Principles & Workflow
+
+1. **Define Messages** – Use **macros** (`Trans`, `t`, `msg`, `Plural`, `Select`) directly in your source code.
+2. **Extract** – Run `lingui extract` to collect all messages into catalog files.
+3. **Translate** – Hand off catalogs to translators (or use a TMS).
+4. **Compile** – Run `lingui compile` to produce lean, runtime‑optimized JavaScript.
+5. **Deploy** – Ship compiled catalogs with your app.
+
 ---
 
-# LinguiJS Macro
+### 2. Macro Setup (Transpiler Configuration)
 
-This skill provides guidance on implementing internationalization (i18n) in JavaScript/TypeScript projects using LinguiJS macros. It focuses on the compile-time extraction workflow enabled by the macro system (`@lingui/macro`).
+Macros are **not** runtime functions – they are transformed at build time. You **must** configure your transpiler to process them.
 
-## Quick Reference
-
-- [Documentation](https://lingui.dev/)
-- [Macro Reference](https://lingui.dev/ref/macro)
-- [CLI Reference](https://lingui.dev/ref/cli)
-- [Configuration](https://lingui.dev/ref/conf)
-
-## Core Concepts
-
-LinguiJS uses a **macro system** to extract messages at build time. This means you write code that looks like standard function calls or JSX components, but behind the scenes, the macro transforms them into ICU MessageFormat messages and extracts them to a catalog.
-
-### Installation
-
-```bash
-npm install @lingui/core @lingui/macro @lingui/cli
-# React users should also install:
-npm install @lingui/react
+#### Babel
+- Install `@lingui/babel-plugin-lingui-macro`.
+- Add it to your Babel config (`.babelrc` or `babel.config.js`).
+```json
+{
+  "plugins": ["@lingui/babel-plugin-lingui-macro"]
+}
 ```
+- If using Vite with `@vitejs/plugin-react`, set `babel: { plugins: ["@lingui/babel-plugin-lingui-macro"] }`.
 
-### Configuration (`lingui.config.ts`)
-
-Create a configuration file in your project root:
-
-```typescript
-import { LinguiConfig } from "@lingui/conf";
-
-const config: LinguiConfig = {
-  locales: ["en", "es", "fr"],
-  sourceLocale: "en",
-  catalogs: [
-    {
-      path: "<rootDir>/src/locales/{locale}/messages",
-      include: ["src/"],
-    },
-  ],
-  format: "po", // or 'json', 'po-gettext'
-};
-
-export default config;
-```
-
-## Macro Usage
-
-### 1. The `t` Macro (Tagged Template Literal)
-
-Used for simple string translation in vanilla JS or logic-heavy areas.
-
-```javascript
-import { t } from "@lingui/macro";
-
-function welcome(name) {
-  // Variables are automatically extracted as placeholders {name}
-  return t`Hello ${name}, welcome to the app!`;
+#### SWC
+- Install `@lingui/swc-plugin`.
+- In `.swcrc` or `next.config.js`, add `"@lingui/swc-plugin"` to `jsc.experimental.plugins` (or `experimental.swcPlugins` in Next.js).
+```js
+// next.config.js
+experimental: {
+  swcPlugins: [
+    ["@lingui/swc-plugin", { /* options */ }]
+  ]
 }
 ```
 
-**Output (Extracted):**
+#### Vite (with Rolldown/Babel)
+- For Vite 8+ using Rolldown, you can use `@rolldown/plugin-babel` along with the `linguiTransformerBabelPreset` exported from `@lingui/vite-plugin`.
 
-```po
-msgid "Hello {name}, welcome to the app!"
-msgstr ""
+**Important:** Without this setup, macros will throw runtime errors (they are designed to fail if not transpiled).
+
+---
+
+### 3. Using Macros – The Preferred DX
+
+All macros are imported from dedicated entry points:
+- **Core (JS) macros** → `@lingui/core/macro`
+- **React (JSX) macros** → `@lingui/react/macro`
+
+#### Core Macros (for any JavaScript context)
+
+- **`t`** – Tagged template literal for immediate translation.
+```js
+import { t } from "@lingui/core/macro";
+const msg = t`Hello ${user.name}`;
+```
+- **`msg`** – Defines a message descriptor for later use (lazy translation).
+```js
+import { msg } from "@lingui/core/macro";
+const welcome = msg`Welcome!`;
+// later: i18n._(welcome)
+```
+- **`plural`** – Handles plural forms.
+```js
+const countLabel = plural(count, {
+  one: "# book",
+  other: "# books",
+});
+```
+- **`select`** – Selects a case based on a value.
+```js
+const label = select(gender, {
+  male: "He",
+  female: "She",
+  other: "They",
+});
+```
+- **`ph`** – **Explicit placeholder naming** (critical for translator context). Use it to give meaningful names to expressions that would otherwise become `{0}`.
+```js
+t`Hello ${ph({ name: getUserName() })}`; // => "Hello {name}"
 ```
 
-### 2. React `<Trans>` Component
+#### React JSX Macros (for React components)
 
-Used for translating JSX content. It handles React components inside the translation seamlessly.
-
+- **`<Trans>`** – The workhorse for translating JSX, including rich text and nested components.
 ```jsx
 import { Trans } from "@lingui/react/macro";
-
-function App() {
-  return (
-    <div>
-      <Trans id="welcome.header">Welcome to the application</Trans>
-      <Trans>
-        Read the <a href="/docs">documentation</a> for more info.
-      </Trans>
-    </div>
-  );
-}
+<Trans>Welcome back, {userName}!</Trans>
+<Trans>Read <a href="/docs">the docs</a>.</Trans>
 ```
-
-**Output (Extracted):**
-
-```po
-msgid "Welcome to the application"
-msgstr ""
-
-msgid "Read the <0>documentation</0> for more info."
-msgstr ""
+- **`<Plural>`** – Pluralization inside JSX.
+```jsx
+<Plural value={count} one="# item" other="# items" />
 ```
-
-### 3. Plurals and Selects
-
-Lingui macros handle ICU plural rules.
-
-```javascript
-import { plural, select, selectOrdinal, t } from "@lingui/macro";
-
-function ItemCount({ count }) {
-  return plural(count, {
-    one: "You have # item",
-    other: "You have # items",
-  });
-}
-
-function GenderSelect({ userGender }) {
-  return select(userGender, {
-    male: "He is the author",
-    female: "She is the author",
-    other: "They are the author",
-  });
-}
+- **`<Select>`** – Switch between variants.
+```jsx
+<Select value={gender} _male="He" _female="She" other="They" />
 ```
-
-**Note:** `#` is a placeholder for the count value in plural strings.
-
-### 4. Defining Messages Separately
-
-Use `defineMessage` to define a translation ID without immediately rendering it.
-
-```javascript
-import { defineMessage } from "@lingui/macro";
-
-const messages = {
-  welcome: defineMessage({
-    id: "msg.welcome",
-    message: "Welcome!",
-    comment: "Header welcome message",
-  }),
-};
-
-// Access later via the i18n core instance
-// i18n._(messages.welcome)
-```
-
-## Workflow
-
-Lingui relies on a strict workflow to keep translation files in sync.
-
-1.  **Extract:** Parse source code to generate message catalogs.
-
-    ```bash
-    lingui extract
-    # or npm run extract
-    ```
-
-    This creates/updates `.po` or `.json` files in your locales folder. Files marked as obsolete will be commented out or removed based on config.
-
-2.  **Translate:** Edit the generated `.po` files.
-
-    ```po
-    #: src/App.js:10
-    msgid "Welcome"
-    msgstr "Bienvenue"  # Translate here
-    ```
-
-3.  **Compile:** Convert message catalogs into runtime-ready JavaScript/JSON.
-    ```bash
-    lingui compile
-    ```
-    This generates `.json` or `.js` files that the runtime `i18n` instance loads.
-
-## Common Pitfalls (Anti-Patterns)
-
-### 1. Forgetting to Import Macros
-
-You must import from `@lingui/macro`. If you forget, the function `t` or component `Trans` will be undefined or not work correctly (no extraction).
-
-```javascript
-// WRONG
-// import { t } from '@lingui/core'; <-- This is the runtime, NOT the macro!
-
-// CORRECT
-import { t } from "@lingui/macro";
-```
-
-### 2. String Concatenation in Plurals
-
-Do not concatenate strings inside macros. It breaks extraction.
-
-```javascript
-// WRONG
-plural(count, {
-  one: "You have " + count + " item", // Macro cannot extract this correctly
-  other: "You have " + count + " items",
-});
-
-// CORRECT
-plural(count, {
-  one: "You have # item",
-  other: "You have # items",
-});
-```
-
-### 3. Dynamic IDs
-
-Message IDs should be static strings.
-
-```javascript
-// WRONG
-const id = "msg." + type;
-<Trans id={id}>...</Trans>
-
-// CORRECT
-<Trans id="msg.typeA">...</Trans>
-```
-
-### 4. Not Compiling Catalogs
-
-If translations appear as keys (IDs) instead of the translated strings, you likely forgot to run `lingui compile` or load the catalog in your app initialization.
-
-## Initialization (Runtime)
-
-Macros handle extraction, but you need to load the compiled catalogs at runtime using `@lingui/core`.
-
-```javascript
-import { i18n } from "@lingui/core";
-import { messages as enMessages } from "./locales/en/messages.js";
-import { messages as esMessages } from "./locales/es/messages.js";
-
-i18n.load("en", enMessages);
-i18n.load("es", esMessages);
-i18n.activate("en"); // Set active locale
+- **`useLingui`** – Provides a **context‑aware `t` function** for translations outside JSX (e.g., props, alerts). This is a macro that transpiles to the runtime `useLingui` hook.
+```jsx
+const { t } = useLingui();
+return <button aria-label={t`Close`}>Close</button>;
 ```
 
 ---
 
-### references/configuration.md
+### 4. Macros vs. Runtime Components
 
-- Essential configuration properties (`locales`, `sourceLocale`, `catalogs`, `format`)
-- Catalog path configuration and source mapping
-- Supported catalog formats (`po`, `json`, `po-gettext`) and their trade-offs
-- Extractor configuration for Vue and custom file types
-- Runtime configuration module setup
+- Macros are **compile‑time**. They produce the `id` and `message` props for the runtime components (`Trans`, `Plural`, etc.) and strip away non‑essential fields (`comment`, `message`) in production.
+- The runtime components are imported from `@lingui/react` (or `@lingui/solid`) and are what actually render translations.
+- **Always prefer macros** – they reduce boilerplate, enforce best practices, and keep your code clean.
 
-### references/react-integration.md
+---
 
-- Usage of the `<Trans>` component for JSX translation
-- Differences between `t` macro and `<Trans>` component
-- `useLingui` macro for dynamic translations inside components
-- Plural and Select components in React context
+### 5. The `I18nProvider` and Catalog Loading
 
-### references/cli-workflow.md
+- Wrap your app with `<I18nProvider i18n={i18n}>`.
+- Load catalogs dynamically:
+```ts
+import { i18n } from "@lingui/core";
 
-- Core CLI commands: `extract`, `compile`
-- Extraction options (`--overwrite`, `--clean`)
-- Compilation options (`--strict` for CI/CD)
-- Recommended npm scripts setup
-- CI/CD integration patterns
+export async function dynamicActivate(locale: string) {
+  const { messages } = await import(`./locales/${locale}/messages`);
+  i18n.loadAndActivate({ locale, messages });
+}
+```
+- Use `fallbackLocales` in config to handle missing translations.
 
-This skill provides comprehensive coverage of LinguiJS macros, focusing on correct setup, extraction workflows, and ICU message format patterns to avoid common internationalization pitfalls.
+---
+
+### 6. CLI Commands (Extract & Compile)
+
+- `lingui extract` – Scans source files, extracts messages, updates catalogs.
+- `lingui extract --clean` – Removes obsolete messages.
+- `lingui compile` – Generates runtime‑optimized JS/TS files.
+- `lingui compile --typescript` – Produces `.ts` catalogs with type definitions.
+
+---
+
+### 7. Common Pitfalls to Avoid
+
+- **Using macros at module level** – They will be evaluated at import time, before the locale is set. Always use them inside functions or components.
+- **Forgetting to run `extract` before building** – Production builds without extracted catalogs will show raw message IDs.
+- **Mixing ESM/CommonJS incorrectly** – Lingui 6 is ESM‑only; ensure your project is compatible.
+- **Using `t` or `msg` without a transpiler setup** – Macros must be transpiled; otherwise they throw runtime errors.
+
+---
+
+### 8. Framework-Specific Considerations
+
+- **React Server Components (RSC):** Use `setI18n` from `@lingui/react/server` to provide the i18n instance to server components.
+- **Next.js:** Use middleware for locale detection and `generateStaticParams` for static generation.
+- **React Native:** Use `@lingui/metro-transformer` to compile `.po` files on the fly; set `defaultComponent={Text}`.
+- **SolidJS:** Use `@lingui/solid`; access `i18n` as a signal (`i18n()`).
+
+---
+
+### 9. Quick Reference – Where to Import
+
+| Macro / Component            | Import from                      |
+|------------------------------|----------------------------------|
+| `t`, `msg`, `plural`, `select`, `ph` | `@lingui/core/macro`         |
+| `Trans`, `Plural`, `Select`, `useLingui` (macro) | `@lingui/react/macro` |
+| `I18nProvider`, `useLingui` (runtime) | `@lingui/react`             |
+| `i18n` (instance)            | `@lingui/core`                   |
