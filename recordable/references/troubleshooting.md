@@ -122,6 +122,33 @@ Puppeteer can't reach into shadow DOM or iframes with the default selector engin
 
 **Fix:** Use `>>> ` (shadow piercing) or switch to the iframe first. This is rare for typical SPAs.
 
+### Cause 5: `css=` prefix
+
+```
+[Recordable] RecordableError: Could not find target: "css=tbody tr:has(span.text-amber-600) button"
+```
+
+recordable has **no `css=` engine**. `resolveTarget()` only rewrites `text:` / `:text()`; every other character of the target goes to Puppeteer verbatim. Puppeteer 25's built-in handler prefixes are `text=`, `xpath=`, `aria=`, `pierce=` — `css=` matches none of them, so the whole string (bare `=` included) is parsed as CSS and never matches. Verified against recordable 0.10.0 + Puppeteer 25.2.1 source (`GetQueryHandler.js`) and reproduced live. If an older note or example shows `css=...` as supported, it is wrong for current versions.
+
+**Fix:** drop the prefix. Plain CSS — including native `:has()` (Chrome 105+) — works. Verified matrix (Chrome headless shell 153, screencast running, InventoryGrid-style table):
+
+| Target | Result |
+|---|---|
+| `css=tbody tr:has(span.text-amber-600) button` | ❌ `Could not find target` |
+| `tbody tr:has(span.text-amber-600) button` | ✅ the low-stock row |
+| `tbody tr:nth-child(3) button` | ✅ |
+| `button:text(Save)` (compound `:text()`) | ✅ |
+| `text:Edit Quantity:nth(2)` | ✅ second visible match |
+| `xpath=//tbody/tr[3]/td[5]/button` | ✅ (routes to the built-in XPath handler) |
+| `tbody tr:has(span.x) button:text(Save)` | ❌ don't mix `:has()` + `:text()` |
+| `text:Edit Quantity` | ✅ but first match = row 1 — wrong row if you wanted the amber one |
+
+### Cause 6: The state you targeted was changed by your own script
+
+Real case: `tbody tr:has(span.text-amber-600)` correctly finds the low-stock row (the quantity span turns amber when `qty <= 10`). The script clicks its Edit button, sets qty 8 → 25, saves. Now the row is **no longer low stock** — the amber class is gone — so a later `zoom` with the same `:has(span.text-amber-600)` origin fails, even though the selector was "correct" minutes earlier.
+
+**Rule:** after an action that mutates data, don't target elements whose class/text was *derived from* the old data. Re-target by structure instead (`tbody tr:nth-child(3)` — the row still exists), or assert the disappearance with `waitFor … state: hidden`. Never make both the "banner is gone" assertion and the following zoom depend on the same state you just destroyed.
+
 ## TimeoutError: Waiting for selector failed
 
 ### Symptom
@@ -147,6 +174,12 @@ The click hit the right button, but the server-side operation failed (e.g. 500 e
 The toast auto-dismissed (e.g. sonner's default 4s) before the `waitFor` polled.
 
 **Fix:** Increase the toast duration in the app, or add a `wait` before `waitFor` to catch the toast earlier.
+
+### Cause 4: Pseudo-class selectors poll with rAF — dead in bare test harnesses
+
+`:text()`, `:has()`, and any selector containing a pseudo-class are polled with **requestAnimationFrame**, not DOM mutations. In a real recording this is invisible — the screencast keeps frames flowing, so rAF fires continuously. But if you validate selectors in a custom headless-shell script, rAF stalls (no frames are produced) and every pseudo-class selector times out even though it is valid.
+
+**Fix:** in a harness, start `Page.startScreencast` first (that's what recordable does), and don't conclude a selector is broken from a bare-harness timeout. Plain CSS without pseudo-classes polls on mutation and is unaffected.
 
 ## Script hangs after `Zoom reset`
 
@@ -231,8 +264,9 @@ The text appears in multiple DOM elements. For `waitFor`/`zoom`, this is fine �
 - For `waitFor`: usually fine — leave as is.
 - For `click`: use a unique selector. Options:
   1. `[data-testid='...']` on the target element (requires app code change)
-  2. A more specific CSS selector (e.g. `div.grid > div:first-child button`)
+  2. A more specific CSS selector (e.g. `div.grid > div:first-child button`, or `:has()` to pick the row by its state)
   3. A different text that only appears on the target
+  4. Append `:nth(N)` to take the Nth visible match instead of the first: `text:Export backup:nth(2)`
 
 ## 502 Bad Gateway on fetch
 
@@ -291,3 +325,15 @@ When a run fails, check in this order:
 6. **Is browser site data cleared?** Open DevTools → Application → Storage → Clear site data
 7. **Read the recordable log** — look for "matched 2 elements" warnings, "Could not find target" errors, and "TimeoutError" lines
 8. **Read the server log** — look for panics, 500 errors, or missing routes
+
+## Engine Notes — Verified Internals (recordable 0.10.0 / Puppeteer 25.2.1)
+
+Source receipts for the rules above, from recordable's `dist/browser/targets.js` + `dist/browser/dom.js` and Puppeteer's `common/GetQueryHandler.js` / `PSelectorParser.js`:
+
+- **`resolveTarget()`** rewrites `text:foo` and inline `:text(foo)` to `::-p-text(foo)` (substring match on the smallest containing element) and passes everything else through verbatim. There is no `css=` stripping.
+- **`getHandle()`** races `frame.locator(sel).setVisibility('visible').waitHandle()` across all frames — "Could not find target" means every frame rejected.
+- **Trailing `:nth(N)`** is split off before resolution and polls `frame.$$(sel)`, filtering to elements with a non-empty bounding box — the Nth **visible** match. A mid-selector `:nth` throws `CONFIG_INVALID` at author time.
+- **Built-in Puppeteer handler prefixes:** `text=`, `xpath=`, `aria=`, `pierce=`. Nothing else — `css=...` therefore becomes an invalid plain CSS selector.
+- **`:has()`** is tokenized as pure CSS and evaluated natively (`querySelector`, Chrome 105+) — works, including alongside `:nth-child()`. But `:has()` + `:text()` switches to the P-selector path, which fails on that combination (verified).
+- **Polling mode:** selectors with pseudo-classes poll with rAF; plain CSS polls on mutation. Fine in real recordings; start screencast when probing in a bare harness.
+- **Custom-harness caveat:** compound `::-p-text()` selectors (`button:text(Save)`) resolve through the locator path but **not** through `frame.$$()` — so combining `:text()` with `:nth(N)` (which uses the `$$` path) fails. Trust the locator path when validating selectors outside recordable.

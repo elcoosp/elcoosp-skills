@@ -84,25 +84,31 @@ For the full action reference + edge cases, see [references/action-reference.md]
 
 ## Selector Rules — Read This Or You Will Fail
 
-`recordable` uses **Puppeteer** under the hood. Puppeteer's selector engine is **not the same as Playwright's**. This is the #1 source of failures.
+`recordable` uses **Puppeteer** under the hood (facts in this section verified against recordable 0.10.0 + Puppeteer 25.2.1). Puppeteer's selector engine is **not the same as Playwright's**. This is the #1 source of failures.
+
+How a target resolves: recordable rewrites `text:` / `:text(...)` to Puppeteer's `::-p-text(...)` and splits off a trailing `:nth(N)`; **everything else passes through verbatim** as a CSS/P-selector. recordable has no selector engine of its own — and there is no `css=` handler anywhere in the chain (see the NOT table). `xpath=` does route to Puppeteer's built-in XPath handler and works (verified), but CSS/`text:` targets are easier to maintain.
 
 ### What works
 
 | Pattern | Example | Notes |
 |---|---|---|
-| `text:foo` | `text:Create vault` | Substring text match. **Picks the first match in DOM order** — see warning below |
+| `text:foo` | `text:Create vault` | Substring match on the **smallest element containing the text**. Multiple matches → first in DOM order; disambiguate with a trailing `:nth(N)` |
 | `#id` | `#username` | Standard CSS ID selector |
 | `.class` | `.btn-primary` | Standard CSS class selector |
 | `[attr='value']` | `[data-testid='export-btn']` | Standard CSS attribute selector — **use this when text is ambiguous** |
-| `css=...` | `css=button.primary` | Explicit CSS engine (rarely needed) |
+| `:has(sel)` | `tbody tr:has(span.text-amber-600) button` | Native CSS `:has()` (Chrome 105+). The clean way to hit "the row that has X" — verified: lands on the only low-stock row without touching app code |
+| `button:text(foo)` | `button:text(Save)` | Inline text pseudo — recordable rewrites it to `::-p-text(foo)` and it composes with plain CSS (verified). Paren content is a substring |
+| `sel:nth(N)` (trailing) | `text:Add comment:nth(2)` | The **Nth visible match** (1-based, document order) of the whole selector. Trailing marker only — a mid-selector `:nth` throws at author time |
 
 ### What does NOT work
 
 | Pattern | Why it fails | Fix |
 |---|---|---|
-| `button:has-text("foo")` | `:has-text()` is **Playwright-specific**. Puppeteer doesn't understand it → "Could not find target" | Use `[data-testid='...']` on the button, or `text:foo` if unambiguous |
+| `css=button.primary` | **There is no `css=` prefix.** recordable passes targets through verbatim and Puppeteer's built-in prefixes are only `text=`, `xpath=`, `aria=`, `pierce=` — `css=...` reaches the CSS engine as literal invalid CSS → "Could not find target" (reproduced on 0.10.0; older notes listing it as supported are wrong) | Drop the prefix: `button.primary`. Plain CSS including `:has()` works |
+| `button:has-text("foo")` | `:has-text()` is **Playwright-specific**. Puppeteer doesn't understand it → "Could not find target" | recordable's inline pseudo is `:text()` (no hyphen): `button:text(foo)`; or `[data-testid='...']`, or `text:foo` |
+| `tr:has(x)` mixed with `:text(y)` | `tbody tr:has(span.x) button:text(Save)` — the P-selector path can't evaluate `:has()` together with `::-p-text()` → "Could not find target" (verified) | Use one or the other: `tbody tr:has(span.x) button` OR `button:text(Save)` |
+| `button:text(foo):nth(2)` | `:text()` + `:nth()` fails: the indexed path queries via `$$`, which can't evaluate a compound `::-p-text` selector (verified) | Use `text:foo:nth(2)` (bare text + `:nth` works) or plain CSS + `:nth()` |
 | `text="foo"` (exact) | Puppeteer's `text=` is "contains", not "exact" — matches multiple elements | Same as above |
-| `xpath=//button[...]` | Puppeteer's `click()` doesn't support XPath directly | Use CSS or `text:` instead |
 
 ### The "text matches both heading and button" trap
 
@@ -213,6 +219,8 @@ Too much zoom in/out causes nausea. Rules of thumb:
 |---|---|---|
 | `ffmpeg: Error: spawn .../ffmpeg-static/ffmpeg ENOENT` | `ffmpeg-static` postinstall didn't run (pnpm blocked it) | `pnpm config set approve-builds ffmpeg-static` then reinstall, OR symlink `ln -sf /opt/homebrew/bin/ffmpeg .../ffmpeg-static/ffmpeg` |
 | `Could not find target: "button:has-text(...)"` | `:has-text()` is Playwright-only, recordable uses Puppeteer | Use `[data-testid='...']` or `text:foo` |
+| `Could not find target: "css=..."` | `css=` isn't stripped and Puppeteer has no `css` handler → invalid CSS | Remove the prefix — plain CSS / `:has()` / `text:` all work |
+| Selector worked earlier in the run, now fails after a click/save | The class/text you targeted was derived from state your action changed (e.g. the low-stock amber badge) | Re-target by structure (`tbody tr:nth-child(3)`) or assert absence via `waitFor … hidden`; see troubleshooting Cause 6 |
 | `TimeoutError: Waiting for selector text:foo` | The element doesn't exist on the page (yet, or at all) | Check: is the page loaded? Is the text spelled exactly? Does it appear in a heading that the script already passed? |
 | `Could not launch Chromium` | Puppeteer's Chrome isn't installed | `pnpx puppeteer browsers install chrome` |
 | Script hangs after `Zoom reset` | The next action is `pause` and ffmpeg is dead (ENOENT earlier) | Fix ffmpeg first (see row 1) |

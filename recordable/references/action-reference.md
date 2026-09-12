@@ -2,6 +2,23 @@
 
 All actions live in the `actions` array. Each action is a JSON object with an `action` field and action-specific fields.
 
+## Target Strings — How They Resolve
+
+All `target` / `origin` values resolve to a Puppeteer P-selector (verified on recordable 0.10.0 / Puppeteer 25.2.1):
+
+| You write | recordable does | Example |
+|---|---|---|
+| `text:foo` | rewrites to `::-p-text(foo)` | `text:Create account` |
+| `:text(foo)` anywhere | rewrites to `::-p-text(foo)` — composes with plain CSS | `button:text(Save)` |
+| trailing `:nth(N)` | takes the Nth **visible** match (1-based, document order) | `text:Add comment:nth(2)` |
+| `xpath=...` | routes to Puppeteer's built-in XPath handler | `xpath=//tbody/tr[3]/td[5]/button` |
+| anything else | passes through verbatim as CSS — so native `:has()` works (Chrome 105+) | `tbody tr:has(span.text-amber-600) button` |
+
+Two hard rules:
+
+- **Never prefix a target with `css=`.** It is not stripped and Puppeteer has no `css` handler — the string reaches `querySelector` as invalid CSS and fails with "Could not find target".
+- **Don't mix `:has()` with `:text()`** (`tbody tr:has(x) button:text(y)` fails — verified), and **don't combine `:text()` with `:nth()`** (`text:foo:nth(2)` is fine; `button:text(foo):nth(2)` is not). Pick one mechanism per target.
+
 ## Navigation
 
 ### `visit`
@@ -26,6 +43,18 @@ Click the first element matching the selector.
 
 Picks the **first match** in DOM order. If the text appears in a heading before the button, the heading wins. See SKILL.md "Selector Rules" section.
 
+To take the second/third match instead, add a trailing `:nth(N)`:
+
+```json
+{ "action": "click", "target": "text:Export backup:nth(2)" }
+```
+
+For row-scoped targets, prefer structural `:has()` over positional `tr:nth-child(n)` when row order could change with the data:
+
+```json
+{ "action": "click", "target": "tbody tr:has(span.text-amber-600) button" }
+```
+
 ### `hover`
 
 Move the cursor to the element. Only visible when `cursor: true` is set in config.
@@ -35,7 +64,7 @@ Move the cursor to the element. Only visible when `cursor: true` is set in confi
 { "action": "hover", "target": "#username" }
 ```
 
-Use before `click` to show the cursor moving to the target. Do NOT use `button:has-text(...)` — Puppeteer doesn't support it.
+Use before `click` to show the cursor moving to the target. Do NOT use `button:has-text(...)` — that's Playwright syntax. recordable's equivalent is `button:text(...)`; for "the button inside the row that has X", use structural `:has()`: `tbody tr:has(span.text-amber-600) button`.
 
 ## Input
 
@@ -215,3 +244,4 @@ Rarely used for demo videos.
 | Hide a navigation transition | `pause` before nav, `resume` after `waitFor` |
 | Type into a form field | `type` (with `#id` selector) |
 | Click a button whose text matches a heading | `click [data-testid='...']` |
+| Target the row whose state matches (amber stock, flagged row, …) | `tbody tr:has(span.text-amber-600) button` |
